@@ -35,6 +35,25 @@ func (s *server) TelemetrySubscribe(req *pb.SubscriptionRequest, stream pb.OpenC
 		freq := path.GetSampleFrequency()
 		fmt.Println(pname, freq)
 	}
+
+	seq := uint64(0)
+
+	for {
+		kv := []*pb.KeyValue{
+			{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: "/interfaces/interface[name='xe-1/2/0']/"}},
+			{Key: "state/mtu", Value: &pb.KeyValue_UintValue{UintValue: 1514}},
+		}
+
+		d := &pb.OpenConfigData{
+			SystemId:       "jvsim",
+			ComponentId:    1212,
+			Timestamp:      1510946604929,
+			SequenceNumber: seq,
+			Kv:             kv,
+		}
+		stream.Send(d)
+		seq++
+	}
 	return nil
 }
 
