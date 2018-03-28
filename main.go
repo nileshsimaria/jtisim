@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"log"
 	"net"
+	"strings"
+	"time"
 )
 
 var (
@@ -16,28 +18,12 @@ var (
 	port = flag.Int32("port", 50051, "grpc server port")
 )
 
-type server struct{}
-
-func (s *server) TelemetrySubscribe(req *pb.SubscriptionRequest, stream pb.OpenConfigTelemetry_TelemetrySubscribeServer) error {
-	md, ok := metadata.FromIncomingContext(stream.Context())
-	if ok {
-		fmt.Println("Received metadata")
-		fmt.Println(md)
-	}
-
-	// send metadata to client
-	header := metadata.Pairs("jtisim", "yes")
-	stream.SendHeader(header)
-
-	plist := req.GetPathList()
-	for _, path := range plist {
-		pname := path.GetPath()
-		freq := path.GetSampleFrequency()
-		fmt.Println(pname, freq)
-	}
+func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
+	pname := path.GetPath()
+	freq := path.GetSampleFrequency()
+	fmt.Println(pname, freq)
 
 	seq := uint64(0)
-
 	for {
 		kv := []*pb.KeyValue{
 			{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: "/interfaces/interface[name='xe-1/2/0']/"}},
@@ -46,14 +32,103 @@ func (s *server) TelemetrySubscribe(req *pb.SubscriptionRequest, stream pb.OpenC
 
 		d := &pb.OpenConfigData{
 			SystemId:       "jvsim",
-			ComponentId:    1212,
+			ComponentId:    1,
 			Timestamp:      1510946604929,
 			SequenceNumber: seq,
 			Kv:             kv,
 		}
-		stream.Send(d)
+		ch <- d
+		time.Sleep(time.Duration(freq) * time.Millisecond)
 		seq++
 	}
+}
+
+func streamBGP(ch chan *pb.OpenConfigData, path *pb.Path) {
+	pname := path.GetPath()
+	freq := path.GetSampleFrequency()
+	fmt.Println(pname, freq)
+
+	seq := uint64(0)
+	for {
+		kv := []*pb.KeyValue{
+			{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: "/bgp"}},
+			{Key: "state/foo", Value: &pb.KeyValue_UintValue{UintValue: 1111}},
+		}
+
+		d := &pb.OpenConfigData{
+			SystemId:       "jvsim",
+			ComponentId:    2,
+			Timestamp:      1510946604929,
+			SequenceNumber: seq,
+			Kv:             kv,
+		}
+		ch <- d
+		time.Sleep(time.Duration(freq) * time.Millisecond)
+		seq++
+	}
+}
+
+func streamLLDP(ch chan *pb.OpenConfigData, path *pb.Path) {
+	pname := path.GetPath()
+	freq := path.GetSampleFrequency()
+	fmt.Println(pname, freq)
+
+	seq := uint64(0)
+	for {
+		kv := []*pb.KeyValue{
+			{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: "/lldp"}},
+			{Key: "state/foo", Value: &pb.KeyValue_UintValue{UintValue: 2222}},
+		}
+
+		d := &pb.OpenConfigData{
+			SystemId:       "jvsim",
+			ComponentId:    3,
+			Timestamp:      1510946604929,
+			SequenceNumber: seq,
+			Kv:             kv,
+		}
+		ch <- d
+		time.Sleep(time.Duration(freq) * time.Millisecond)
+		seq++
+	}
+}
+
+type server struct{}
+
+func (s *server) TelemetrySubscribe(req *pb.SubscriptionRequest, stream pb.OpenConfigTelemetry_TelemetrySubscribeServer) error {
+	md, ok := metadata.FromIncomingContext(stream.Context())
+	if ok {
+		fmt.Println("Client metadata:")
+		fmt.Println(md)
+	}
+
+	// send metadata to client
+	header := metadata.Pairs("jtisim", "yes")
+	stream.SendHeader(header)
+
+	plist := req.GetPathList()
+	ch := make(chan *pb.OpenConfigData)
+	for _, path := range plist {
+		pname := path.GetPath()
+		switch {
+		case strings.HasPrefix(pname, "/interfaces"):
+			go streamInterfaces(ch, path)
+		case strings.HasPrefix(pname, "/bgp"):
+			go streamBGP(ch, path)
+		case strings.HasPrefix(pname, "/lldp"):
+			go streamLLDP(ch, path)
+		default:
+			log.Fatalf("Sensor (%s) is not yet supported", pname)
+		}
+	}
+
+	for {
+		select {
+		case data := <-ch:
+			stream.Send(data)
+		}
+	}
+
 	return nil
 }
 
