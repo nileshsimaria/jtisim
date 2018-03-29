@@ -144,7 +144,6 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 			rValue = getRandom(interfaces.desc.IFD.INOctets)
 			ino := ifd.inOctets + uint64((uint32(rValue) * (freq / 1000)))
 			ifd.inOctets = ino
-			fmt.Printf("(%v -- %v)\n", rValue, ino)
 
 			ops := "UP"
 			ads := "DOWN"
@@ -172,10 +171,18 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 
 			for _, ifl := range ifd.ifls {
 				prefixVifl := fmt.Sprintf("/interfaces/interface[name='%s']/subinterfaces/subinterface[index='%d']", ifd.name, ifl.index)
-				inup := ifl.inUPkts + 100
+
+				rValue := getRandom(interfaces.desc.IFL.INUnicastPkts)
+				inup := ifl.inUPkts + uint64((uint32(rValue) * (freq / 1000)))
 				ifl.inUPkts = inup
-				inmp := ifl.inMPkts + 1000
+
+				fmt.Printf("(%v -- %v)\n", rValue, inup)
+
+				rValue = getRandom(interfaces.desc.IFL.INMulticastPkts)
+				inmp := ifl.inMPkts + uint64((uint32(rValue) * (freq / 1000)))
 				ifl.inMPkts = inmp
+
+				fmt.Printf("(%v -- %v)\n", rValue, inmp)
 
 				kvifl := []*pb.KeyValue{
 					{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: prefixVifl}},
