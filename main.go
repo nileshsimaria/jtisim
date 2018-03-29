@@ -5,7 +5,6 @@ import (
 	"log"
 	"net"
 	"strings"
-	"time"
 
 	pb "github.com/nileshsimaria/jtimon/telemetry"
 	flag "github.com/spf13/pflag"
@@ -18,56 +17,6 @@ var (
 	host = flag.String("host", "127.0.0.1", "host name or ip")
 	port = flag.Int32("port", 50051, "grpc server port")
 )
-
-func streamBGP(ch chan *pb.OpenConfigData, path *pb.Path) {
-	pname := path.GetPath()
-	freq := path.GetSampleFrequency()
-	fmt.Println(pname, freq)
-
-	seq := uint64(0)
-	for {
-		kv := []*pb.KeyValue{
-			{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: "/bgp"}},
-			{Key: "state/foo", Value: &pb.KeyValue_UintValue{UintValue: 1111}},
-		}
-
-		d := &pb.OpenConfigData{
-			SystemId:       "jvsim",
-			ComponentId:    2,
-			Timestamp:      uint64(MakeMSTimestamp()),
-			SequenceNumber: seq,
-			Kv:             kv,
-		}
-		ch <- d
-		time.Sleep(time.Duration(freq) * time.Millisecond)
-		seq++
-	}
-}
-
-func streamLLDP(ch chan *pb.OpenConfigData, path *pb.Path) {
-	pname := path.GetPath()
-	freq := path.GetSampleFrequency()
-	fmt.Println(pname, freq)
-
-	seq := uint64(0)
-	for {
-		kv := []*pb.KeyValue{
-			{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: "/lldp"}},
-			{Key: "state/foo", Value: &pb.KeyValue_UintValue{UintValue: 2222}},
-		}
-
-		d := &pb.OpenConfigData{
-			SystemId:       "jvsim",
-			ComponentId:    3,
-			Timestamp:      uint64(MakeMSTimestamp()),
-			SequenceNumber: seq,
-			Kv:             kv,
-		}
-		ch <- d
-		time.Sleep(time.Duration(freq) * time.Millisecond)
-		seq++
-	}
-}
 
 type server struct{}
 
