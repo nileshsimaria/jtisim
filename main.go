@@ -2,46 +2,22 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net"
+	"strings"
+	"time"
+
 	pb "github.com/nileshsimaria/jtimon/telemetry"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"log"
-	"net"
-	"strings"
-	"time"
 )
 
 var (
 	host = flag.String("host", "127.0.0.1", "host name or ip")
 	port = flag.Int32("port", 50051, "grpc server port")
 )
-
-func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
-	pname := path.GetPath()
-	freq := path.GetSampleFrequency()
-	fmt.Println(pname, freq)
-
-	seq := uint64(0)
-	for {
-		kv := []*pb.KeyValue{
-			{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: "/interfaces/interface[name='xe-1/2/0']/"}},
-			{Key: "state/mtu", Value: &pb.KeyValue_UintValue{UintValue: 1514}},
-		}
-
-		d := &pb.OpenConfigData{
-			SystemId:       "jvsim",
-			ComponentId:    1,
-			Timestamp:      1510946604929,
-			SequenceNumber: seq,
-			Kv:             kv,
-		}
-		ch <- d
-		time.Sleep(time.Duration(freq) * time.Millisecond)
-		seq++
-	}
-}
 
 func streamBGP(ch chan *pb.OpenConfigData, path *pb.Path) {
 	pname := path.GetPath()
@@ -58,7 +34,7 @@ func streamBGP(ch chan *pb.OpenConfigData, path *pb.Path) {
 		d := &pb.OpenConfigData{
 			SystemId:       "jvsim",
 			ComponentId:    2,
-			Timestamp:      1510946604929,
+			Timestamp:      uint64(MakeMSTimestamp()),
 			SequenceNumber: seq,
 			Kv:             kv,
 		}
@@ -83,7 +59,7 @@ func streamLLDP(ch chan *pb.OpenConfigData, path *pb.Path) {
 		d := &pb.OpenConfigData{
 			SystemId:       "jvsim",
 			ComponentId:    3,
-			Timestamp:      1510946604929,
+			Timestamp:      uint64(MakeMSTimestamp()),
 			SequenceNumber: seq,
 			Kv:             kv,
 		}
@@ -128,8 +104,6 @@ func (s *server) TelemetrySubscribe(req *pb.SubscriptionRequest, stream pb.OpenC
 			stream.Send(data)
 		}
 	}
-
-	return nil
 }
 
 func (s *server) CancelTelemetrySubscription(ctx context.Context, req *pb.CancelSubscriptionRequest) (*pb.CancelSubscriptionReply, error) {
