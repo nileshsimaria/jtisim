@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"time"
 
@@ -29,16 +30,16 @@ type Description struct {
 
 // IFDCounters of interfaces
 type IFDCounters struct {
-	INPkts      uint64 `json:"in-pkts"`
-	INOctets    uint64 `json:"in-octets"`
-	AdminStatus bool   `json:"admin-status"`
-	OperStatus  bool   `json:"oper-status"`
+	INPkts      int32 `json:"in-pkts"`
+	INOctets    int32 `json:"in-octets"`
+	AdminStatus bool  `json:"admin-status"`
+	OperStatus  bool  `json:"oper-status"`
 }
 
 // IFLCounters of interfaces
 type IFLCounters struct {
-	INUnicastPkts   uint64 `json:"in-unicast-pkts"`
-	INMulticastPkts uint64 `json:"in-multicast-pkts"`
+	INUnicastPkts   int32 `json:"in-unicast-pkts"`
+	INMulticastPkts int32 `json:"in-multicast-pkts"`
 }
 
 func parseInterfacesJSON() *IDesc {
@@ -56,6 +57,7 @@ func parseInterfacesJSON() *IDesc {
 }
 
 type interfaces struct {
+	desc *IDesc
 	ifds []*ifd
 }
 type ifd struct {
@@ -81,6 +83,7 @@ func generateIList(idesc *IDesc) *interfaces {
 	logical := idesc.Desc.Logical
 
 	interfaces := &interfaces{
+		desc: idesc,
 		ifds: make([]*ifd, fpc*pic*port),
 	}
 
@@ -110,24 +113,39 @@ func generateIList(idesc *IDesc) *interfaces {
 	return interfaces
 }
 
+func getRandom(num int32) int32 {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return r.Int31n(num)
+}
+
 func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
-	seq := uint64(0)
+	sysID := fmt.Sprintf("jtisim:%s:%d", *host, *port)
 	pname := path.GetPath()
 	freq := path.GetSampleFrequency()
-	nsFreq := time.Duration(freq) * 1000000
 	fmt.Println(pname, freq)
+
+	nsFreq := time.Duration(freq) * 1000000
 	iDesc := parseInterfacesJSON()
 	interfaces := generateIList(iDesc)
+
+	seq := uint64(0)
 
 	for {
 		ifds := interfaces.ifds
 		start := time.Now()
 		for _, ifd := range ifds {
 			prefixV := fmt.Sprintf("/interfaces/interface[name='%s']", ifd.name)
-			inp := ifd.inPkts + 100 // TODO : introduce step concept
+
+			rValue := getRandom(interfaces.desc.IFD.INPkts)
+			inp := ifd.inPkts + uint64((uint32(rValue) * (freq / 1000)))
 			ifd.inPkts = inp
-			ino := ifd.inOctets + 1000 // TODO : introduce step concept
+			fmt.Printf("(%v -- %v)", rValue, inp)
+
+			rValue = getRandom(interfaces.desc.IFD.INOctets)
+			ino := ifd.inOctets + uint64((uint32(rValue) * (freq / 1000)))
 			ifd.inOctets = ino
+			fmt.Printf("(%v -- %v)\n", rValue, ino)
+
 			ops := "UP"
 			ads := "DOWN"
 
@@ -141,11 +159,13 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 			}
 
 			d := &pb.OpenConfigData{
-				SystemId:       "jtisim",
+				SystemId:       sysID,
 				ComponentId:    1,
 				Timestamp:      uint64(MakeMSTimestamp()),
 				SequenceNumber: seq,
 				Kv:             kv,
+				SyncResponse:   false,
+				Path:           "sensor_1000_1_1:/junos/system/linecard/interface/:/junos/system/linecard/interface/:PFE",
 			}
 			seq++
 			ch <- d
@@ -159,16 +179,18 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 
 				kvifl := []*pb.KeyValue{
 					{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: prefixVifl}},
-					{Key: "subinterfaces/subinterface/index", Value: &pb.KeyValue_UintValue{UintValue: uint64(ifl.index)}},
+					{Key: "index", Value: &pb.KeyValue_UintValue{UintValue: uint64(ifl.index)}},
 					{Key: "state/counters/in-unicast-pkts", Value: &pb.KeyValue_UintValue{UintValue: inup}},
 					{Key: "state/counters/in-multicast-pkts", Value: &pb.KeyValue_UintValue{UintValue: inmp}},
 				}
 				d := &pb.OpenConfigData{
-					SystemId:       "jtisim",
+					SystemId:       sysID,
 					ComponentId:    1,
 					Timestamp:      uint64(MakeMSTimestamp()),
 					SequenceNumber: seq,
 					Kv:             kvifl,
+					SyncResponse:   false,
+					Path:           "sensor_1013_1_1:/junos/system/linecard/interface/logical/usage/:/interfaces/interface/subinterfaces/subinterface/:PFE",
 				}
 				seq++
 				ch <- d
@@ -177,7 +199,6 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 
 		} //finish one wrap
 		wrapDuration := time.Since(start)
-		fmt.Println(nsFreq, wrapDuration, nsFreq-wrapDuration)
 		time.Sleep(nsFreq - wrapDuration)
 	}
 }
