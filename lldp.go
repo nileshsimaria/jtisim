@@ -20,7 +20,7 @@ func streamLLDP(ch chan *pb.OpenConfigData, path *pb.Path) {
 		}
 
 		d := &pb.OpenConfigData{
-			SystemId:       "jvsim",
+			SystemId:       "jtisim",
 			ComponentId:    3,
 			Timestamp:      uint64(MakeMSTimestamp()),
 			SequenceNumber: seq,

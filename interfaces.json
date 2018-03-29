@@ -3,7 +3,7 @@
         "media" : "xe",
         "fpc" : 1,
         "pic" : 1,
-        "port" : 2,
+        "port" : 1,
         "logical" : 3
     },
     "ifd-counters"  : {

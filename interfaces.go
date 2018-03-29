@@ -114,12 +114,14 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 	seq := uint64(0)
 	pname := path.GetPath()
 	freq := path.GetSampleFrequency()
+	nsFreq := time.Duration(freq) * 1000000
 	fmt.Println(pname, freq)
 	iDesc := parseInterfacesJSON()
 	interfaces := generateIList(iDesc)
 
 	for {
 		ifds := interfaces.ifds
+		start := time.Now()
 		for _, ifd := range ifds {
 			prefixV := fmt.Sprintf("/interfaces/interface[name='%s']", ifd.name)
 			inp := ifd.inPkts + 100 // TODO : introduce step concept
@@ -139,7 +141,7 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 			}
 
 			d := &pb.OpenConfigData{
-				SystemId:       "jvsim",
+				SystemId:       "jtisim",
 				ComponentId:    1,
 				Timestamp:      uint64(MakeMSTimestamp()),
 				SequenceNumber: seq,
@@ -162,7 +164,7 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 					{Key: "state/counters/in-multicast-pkts", Value: &pb.KeyValue_UintValue{UintValue: inmp}},
 				}
 				d := &pb.OpenConfigData{
-					SystemId:       "jvsim",
+					SystemId:       "jtisim",
 					ComponentId:    1,
 					Timestamp:      uint64(MakeMSTimestamp()),
 					SequenceNumber: seq,
@@ -174,7 +176,8 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 			}
 
 		} //finish one wrap
-
-		time.Sleep(time.Duration(freq) * time.Millisecond)
+		wrapDuration := time.Since(start)
+		fmt.Println(nsFreq, wrapDuration, nsFreq-wrapDuration)
+		time.Sleep(nsFreq - wrapDuration)
 	}
 }

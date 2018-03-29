@@ -50,7 +50,11 @@ func (s *server) TelemetrySubscribe(req *pb.SubscriptionRequest, stream pb.OpenC
 	for {
 		select {
 		case data := <-ch:
-			stream.Send(data)
+			if err := stream.Send(data); err != nil {
+				return err
+			}
+		case <-stream.Context().Done():
+			return stream.Context().Err()
 		}
 	}
 }
