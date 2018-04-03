@@ -190,6 +190,7 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 					{Key: "state/counters/in-unicast-pkts", Value: &pb.KeyValue_UintValue{UintValue: inup}},
 					{Key: "state/counters/in-multicast-pkts", Value: &pb.KeyValue_UintValue{UintValue: inmp}},
 				}
+
 				d := &pb.OpenConfigData{
 					SystemId:       sysID,
 					ComponentId:    1,

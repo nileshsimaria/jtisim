@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	host = flag.String("host", "127.0.0.1", "host name or ip")
+	host = flag.String("host", "", "host name or ip")
 	port = flag.Int32("port", 50051, "grpc server port")
 )
 
