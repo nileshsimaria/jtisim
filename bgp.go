@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "github.com/nileshsimaria/jtimon/telemetry"
+	pb "github.com/nileshsimaria/jtisim/telemetry"
 )
 
 func streamBGP(ch chan *pb.OpenConfigData, path *pb.Path) {

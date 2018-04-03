@@ -6,7 +6,8 @@ import (
 	"net"
 	"strings"
 
-	pb "github.com/nileshsimaria/jtimon/telemetry"
+	auth_pb "github.com/nileshsimaria/jtisim/authentication"
+	pb "github.com/nileshsimaria/jtisim/telemetry"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -18,7 +19,18 @@ var (
 	port = flag.Int32("port", 50051, "grpc server port")
 )
 
-type server struct{}
+type server struct {
+}
+type authServer struct {
+}
+
+func (s *authServer) LoginCheck(ctx context.Context, req *auth_pb.LoginRequest) (*auth_pb.LoginReply, error) {
+	// allow everyone
+	rep := &auth_pb.LoginReply{
+		Result: true,
+	}
+	return rep, nil
+}
 
 func (s *server) TelemetrySubscribe(req *pb.SubscriptionRequest, stream pb.OpenConfigTelemetry_TelemetrySubscribeServer) error {
 	md, ok := metadata.FromIncomingContext(stream.Context())
@@ -84,6 +96,10 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer()
+	authServer := &authServer{}
+
+	auth_pb.RegisterLoginServer(grpcServer, authServer)
 	pb.RegisterOpenConfigTelemetryServer(grpcServer, &server{})
+
 	grpcServer.Serve(lis)
 }

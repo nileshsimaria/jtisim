@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	pb "github.com/nileshsimaria/jtimon/telemetry"
+	pb "github.com/nileshsimaria/jtisim/telemetry"
 )
 
 // IDesc Interface description structrue
@@ -43,7 +43,7 @@ type IFLCounters struct {
 }
 
 func parseInterfacesJSON() *IDesc {
-	file, err := ioutil.ReadFile("interfaces.json")
+	file, err := ioutil.ReadFile("desc/interfaces.json")
 	if err != nil {
 		log.Fatalf("%v", err)
 		os.Exit(1)
@@ -139,7 +139,6 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 			rValue := getRandom(interfaces.desc.IFD.INPkts)
 			inp := ifd.inPkts + uint64((uint32(rValue) * (freq / 1000)))
 			ifd.inPkts = inp
-			fmt.Printf("(%v -- %v)", rValue, inp)
 
 			rValue = getRandom(interfaces.desc.IFD.INOctets)
 			ino := ifd.inOctets + uint64((uint32(rValue) * (freq / 1000)))
@@ -176,13 +175,9 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 				inup := ifl.inUPkts + uint64((uint32(rValue) * (freq / 1000)))
 				ifl.inUPkts = inup
 
-				fmt.Printf("(%v -- %v)\n", rValue, inup)
-
 				rValue = getRandom(interfaces.desc.IFL.INMulticastPkts)
 				inmp := ifl.inMPkts + uint64((uint32(rValue) * (freq / 1000)))
 				ifl.inMPkts = inmp
-
-				fmt.Printf("(%v -- %v)\n", rValue, inmp)
 
 				kvifl := []*pb.KeyValue{
 					{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: prefixVifl}},
