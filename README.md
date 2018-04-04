@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/nileshsimaria/jtisim.svg?branch=master)](https://travis-ci.org/nileshsimaria/jtisim)
+
 # jtisim
 JTI simulator (server)
 
