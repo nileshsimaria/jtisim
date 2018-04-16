@@ -114,6 +114,9 @@ func generateIList(idesc *IDesc) *interfaces {
 }
 
 func getRandom(num int32) int32 {
+	if *random == false {
+		return 100
+	}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return r.Int31n(num)
 }
@@ -134,7 +137,7 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 		ifds := interfaces.ifds
 		start := time.Now()
 		for _, ifd := range ifds {
-			prefixV := fmt.Sprintf("/interfaces/interface[name='%s']", ifd.name)
+			prefixV := fmt.Sprintf("/interfaces/interface[name='%s']/", ifd.name)
 
 			rValue := getRandom(interfaces.desc.IFD.INPkts)
 			inp := ifd.inPkts + uint64((uint32(rValue) * (freq / 1000)))
@@ -169,7 +172,7 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 			ch <- d
 
 			for _, ifl := range ifd.ifls {
-				prefixVifl := fmt.Sprintf("/interfaces/interface[name='%s']/subinterfaces/subinterface[index='%d']", ifd.name, ifl.index)
+				prefixVifl := fmt.Sprintf("/interfaces/interface[name='%s']/subinterfaces/subinterface[index='%d']/", ifd.name, ifl.index)
 
 				rValue := getRandom(interfaces.desc.IFL.INUnicastPkts)
 				inup := ifl.inUPkts + uint64((uint32(rValue) * (freq / 1000)))

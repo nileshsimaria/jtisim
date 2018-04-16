@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	host = flag.String("host", "", "host name or ip")
-	port = flag.Int32("port", 50051, "grpc server port")
+	host   = flag.String("host", "", "host name or ip")
+	port   = flag.Int32("port", 50051, "grpc server port")
+	random = flag.Bool("random", false, "Use random number to generate counter values")
 )
 
 type server struct {
