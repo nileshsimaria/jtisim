@@ -1,4 +1,4 @@
-package main
+package jtisim
 
 import (
 	"fmt"
@@ -8,19 +8,47 @@ import (
 
 	auth_pb "github.com/nileshsimaria/jtisim/authentication"
 	pb "github.com/nileshsimaria/jtisim/telemetry"
-	flag "github.com/spf13/pflag"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
-var (
-	host   = flag.String("host", "", "host name or ip")
-	port   = flag.Int32("port", 50051, "grpc server port")
-	random = flag.Bool("random", false, "Use random number to generate counter values")
-)
+// JTISim is JTI Simulator
+type JTISim struct {
+	host    string
+	port    int32
+	random  bool
+	descDir string
+}
+
+// NewJTISim to create new jti simulator
+func NewJTISim(host string, port int32, random bool, descDir string) *JTISim {
+	return &JTISim{
+		host:    host,
+		port:    port,
+		random:  random,
+		descDir: descDir,
+	}
+}
+
+// Start the simulator
+func (s *JTISim) Start() error {
+	if lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", s.host, s.port)); err == nil {
+		grpcServer := grpc.NewServer()
+		authServer := &authServer{}
+
+		auth_pb.RegisterLoginServer(grpcServer, authServer)
+		pb.RegisterOpenConfigTelemetryServer(grpcServer, &server{s})
+
+		grpcServer.Serve(lis)
+	} else {
+		return err
+	}
+	return nil
+}
 
 type server struct {
+	jtisim *JTISim
 }
 type authServer struct {
 }
@@ -36,8 +64,8 @@ func (s *authServer) LoginCheck(ctx context.Context, req *auth_pb.LoginRequest) 
 func (s *server) TelemetrySubscribe(req *pb.SubscriptionRequest, stream pb.OpenConfigTelemetry_TelemetrySubscribeServer) error {
 	md, ok := metadata.FromIncomingContext(stream.Context())
 	if ok {
-		fmt.Println("Client metadata:")
-		fmt.Println(md)
+		log.Println("Client metadata:")
+		log.Println(md)
 	}
 
 	// send metadata to client
@@ -50,11 +78,11 @@ func (s *server) TelemetrySubscribe(req *pb.SubscriptionRequest, stream pb.OpenC
 		pname := path.GetPath()
 		switch {
 		case strings.HasPrefix(pname, "/interfaces"):
-			go streamInterfaces(ch, path)
+			go s.streamInterfaces(ch, path)
 		case strings.HasPrefix(pname, "/bgp"):
-			go streamBGP(ch, path)
+			go s.streamBGP(ch, path)
 		case strings.HasPrefix(pname, "/lldp"):
-			go streamLLDP(ch, path)
+			go s.streamLLDP(ch, path)
 		default:
 			log.Fatalf("Sensor (%s) is not yet supported", pname)
 		}
@@ -86,21 +114,4 @@ func (s *server) GetTelemetryOperationalState(ctx context.Context, req *pb.GetOp
 
 func (s *server) GetDataEncodings(ctx context.Context, req *pb.DataEncodingRequest) (*pb.DataEncodingReply, error) {
 	return nil, nil
-}
-
-func main() {
-	flag.Parse()
-
-	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", *host, *port))
-	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-
-	grpcServer := grpc.NewServer()
-	authServer := &authServer{}
-
-	auth_pb.RegisterLoginServer(grpcServer, authServer)
-	pb.RegisterOpenConfigTelemetryServer(grpcServer, &server{})
-
-	grpcServer.Serve(lis)
 }

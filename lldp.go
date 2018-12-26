@@ -1,16 +1,16 @@
-package main
+package jtisim
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	pb "github.com/nileshsimaria/jtisim/telemetry"
 )
 
-func streamLLDP(ch chan *pb.OpenConfigData, path *pb.Path) {
+func (s *server) streamLLDP(ch chan *pb.OpenConfigData, path *pb.Path) {
 	pname := path.GetPath()
 	freq := path.GetSampleFrequency()
-	fmt.Println(pname, freq)
+	log.Println(pname, freq)
 
 	seq := uint64(0)
 	for {

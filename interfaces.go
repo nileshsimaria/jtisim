@@ -1,4 +1,4 @@
-package main
+package jtisim
 
 import (
 	"encoding/json"
@@ -42,8 +42,8 @@ type IFLCounters struct {
 	INMulticastPkts int32 `json:"in-multicast-pkts"`
 }
 
-func parseInterfacesJSON() *IDesc {
-	file, err := ioutil.ReadFile("desc/interfaces.json")
+func parseInterfacesJSON(dir string) *IDesc {
+	file, err := ioutil.ReadFile(dir + "/interfaces.json")
 	if err != nil {
 		log.Fatalf("%v", err)
 		os.Exit(1)
@@ -113,22 +113,22 @@ func generateIList(idesc *IDesc) *interfaces {
 	return interfaces
 }
 
-func getRandom(num int32) int32 {
-	if *random == false {
+func getRandom(num int32, random bool) int32 {
+	if random == false {
 		return 100
 	}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return r.Int31n(num)
 }
 
-func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
-	sysID := fmt.Sprintf("jtisim:%s:%d", *host, *port)
+func (s *server) streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
+	sysID := fmt.Sprintf("jtisim:%s:%d", s.jtisim.host, s.jtisim.port)
 	pname := path.GetPath()
 	freq := path.GetSampleFrequency()
-	fmt.Println(pname, freq)
+	log.Println(pname, freq)
 
 	nsFreq := time.Duration(freq) * 1000000
-	iDesc := parseInterfacesJSON()
+	iDesc := parseInterfacesJSON(s.jtisim.descDir)
 	interfaces := generateIList(iDesc)
 
 	seq := uint64(0)
@@ -139,11 +139,11 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 		for _, ifd := range ifds {
 			prefixV := fmt.Sprintf("/interfaces/interface[name='%s']/", ifd.name)
 
-			rValue := getRandom(interfaces.desc.IFD.INPkts)
+			rValue := getRandom(interfaces.desc.IFD.INPkts, s.jtisim.random)
 			inp := ifd.inPkts + uint64((uint32(rValue) * (freq / 1000)))
 			ifd.inPkts = inp
 
-			rValue = getRandom(interfaces.desc.IFD.INOctets)
+			rValue = getRandom(interfaces.desc.IFD.INOctets, s.jtisim.random)
 			ino := ifd.inOctets + uint64((uint32(rValue) * (freq / 1000)))
 			ifd.inOctets = ino
 
@@ -174,11 +174,11 @@ func streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 			for _, ifl := range ifd.ifls {
 				prefixVifl := fmt.Sprintf("/interfaces/interface[name='%s']/subinterfaces/subinterface[index='%d']/", ifd.name, ifl.index)
 
-				rValue := getRandom(interfaces.desc.IFL.INUnicastPkts)
+				rValue := getRandom(interfaces.desc.IFL.INUnicastPkts, s.jtisim.random)
 				inup := ifl.inUPkts + uint64((uint32(rValue) * (freq / 1000)))
 				ifl.inUPkts = inup
 
-				rValue = getRandom(interfaces.desc.IFL.INMulticastPkts)
+				rValue = getRandom(interfaces.desc.IFL.INMulticastPkts, s.jtisim.random)
 				inmp := ifl.inMPkts + uint64((uint32(rValue) * (freq / 1000)))
 				ifl.inMPkts = inmp
 
