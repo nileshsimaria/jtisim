@@ -6,8 +6,8 @@ import (
 	"net"
 	"strings"
 
-	auth_pb "github.com/nileshsimaria/jtisim/authentication"
-	pb "github.com/nileshsimaria/jtisim/telemetry"
+	auth_pb "github.com/nileshsimaria/jtimon/authentication"
+	pb "github.com/nileshsimaria/jtimon/telemetry"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"

@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	pb "github.com/nileshsimaria/jtisim/telemetry"
+	pb "github.com/nileshsimaria/jtimon/telemetry"
 )
 
 // IDesc Interface description structrue

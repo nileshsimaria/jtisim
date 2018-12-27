@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	pb "github.com/nileshsimaria/jtisim/telemetry"
+	pb "github.com/nileshsimaria/jtimon/telemetry"
 )
 
 func (s *server) streamLLDP(ch chan *pb.OpenConfigData, path *pb.Path) {

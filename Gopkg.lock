@@ -14,6 +14,15 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/nileshsimaria/jtimon"
+  packages = [
+    "authentication",
+    "telemetry"
+  ]
+  revision = "5e0061ca0f92c6c91e871f7ff20a700dc7ca8a01"
+  version = "v2.1.0"
+
+[[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
@@ -94,6 +103,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "96508bb0a87fb0724622b3c128f14115c0bf9276ebc7a4893b05ee5f193e4297"
+  inputs-digest = "25c257fbc25f3f50957666833d8609785bfde553413113b893c8dc76030a0b94"
   solver-name = "gps-cdcl"
   solver-version = 1
