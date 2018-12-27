@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	pb "github.com/nileshsimaria/jtimon/telemetry"
+	tpb "github.com/nileshsimaria/jtimon/telemetry"
 )
 
 // IDesc Interface description structrue
@@ -121,7 +121,7 @@ func getRandom(num int32, random bool) int32 {
 	return r.Int31n(num)
 }
 
-func (s *server) streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
+func (s *server) streamInterfaces(ch chan *tpb.OpenConfigData, path *tpb.Path) {
 	sysID := fmt.Sprintf("jtisim:%s:%d", s.jtisim.host, s.jtisim.port)
 	pname := path.GetPath()
 	freq := path.GetSampleFrequency()
@@ -150,16 +150,16 @@ func (s *server) streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 			ops := "UP"
 			ads := "DOWN"
 
-			kv := []*pb.KeyValue{
-				{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: prefixV}},
-				{Key: "name", Value: &pb.KeyValue_StrValue{StrValue: ifd.name}},
-				{Key: "state/oper-status", Value: &pb.KeyValue_StrValue{StrValue: ops}},
-				{Key: "state/admin-status", Value: &pb.KeyValue_StrValue{StrValue: ads}},
-				{Key: "state/counters/in-pkts", Value: &pb.KeyValue_UintValue{UintValue: inp}},
-				{Key: "state/counters/in-octets", Value: &pb.KeyValue_UintValue{UintValue: ino}},
+			kv := []*tpb.KeyValue{
+				{Key: "__prefix__", Value: &tpb.KeyValue_StrValue{StrValue: prefixV}},
+				{Key: "name", Value: &tpb.KeyValue_StrValue{StrValue: ifd.name}},
+				{Key: "state/oper-status", Value: &tpb.KeyValue_StrValue{StrValue: ops}},
+				{Key: "state/admin-status", Value: &tpb.KeyValue_StrValue{StrValue: ads}},
+				{Key: "state/counters/in-pkts", Value: &tpb.KeyValue_UintValue{UintValue: inp}},
+				{Key: "state/counters/in-octets", Value: &tpb.KeyValue_UintValue{UintValue: ino}},
 			}
 
-			d := &pb.OpenConfigData{
+			d := &tpb.OpenConfigData{
 				SystemId:       sysID,
 				ComponentId:    1,
 				Timestamp:      uint64(MakeMSTimestamp()),
@@ -182,14 +182,14 @@ func (s *server) streamInterfaces(ch chan *pb.OpenConfigData, path *pb.Path) {
 				inmp := ifl.inMPkts + uint64((uint32(rValue) * (freq / 1000)))
 				ifl.inMPkts = inmp
 
-				kvifl := []*pb.KeyValue{
-					{Key: "__prefix__", Value: &pb.KeyValue_StrValue{StrValue: prefixVifl}},
-					{Key: "index", Value: &pb.KeyValue_UintValue{UintValue: uint64(ifl.index)}},
-					{Key: "state/counters/in-unicast-pkts", Value: &pb.KeyValue_UintValue{UintValue: inup}},
-					{Key: "state/counters/in-multicast-pkts", Value: &pb.KeyValue_UintValue{UintValue: inmp}},
+				kvifl := []*tpb.KeyValue{
+					{Key: "__prefix__", Value: &tpb.KeyValue_StrValue{StrValue: prefixVifl}},
+					{Key: "index", Value: &tpb.KeyValue_UintValue{UintValue: uint64(ifl.index)}},
+					{Key: "state/counters/in-unicast-pkts", Value: &tpb.KeyValue_UintValue{UintValue: inup}},
+					{Key: "state/counters/in-multicast-pkts", Value: &tpb.KeyValue_UintValue{UintValue: inmp}},
 				}
 
-				d := &pb.OpenConfigData{
+				d := &tpb.OpenConfigData{
 					SystemId:       sysID,
 					ComponentId:    1,
 					Timestamp:      uint64(MakeMSTimestamp()),
