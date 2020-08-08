@@ -1486,7 +1486,6 @@ func (s *server) gnmiStreamInterfaces(ch chan *gnmipb.SubscribeResponse, pname s
 
 		} //finish one wrap
 		wrapDuration := time.Since(start)
-		log.Println("Sleeping for %v", nsFreq-wrapDuration)
 		time.Sleep(nsFreq - wrapDuration)
 	}
 }
