@@ -163,6 +163,7 @@ func (s *server) Subscribe(stream gnmipb.GNMI_SubscribeServer) error {
 		log.Fatalf("Aliases not supported, received %v", subReq.GetUseAliases())
 	}
 
+	stream.Send(&gnmipb.SubscribeResponse{Response: &gnmipb.SubscribeResponse_SyncResponse{SyncResponse: true}})
 	ch := make(chan *gnmipb.SubscribeResponse)
 	for _, sub := range subReq.GetSubscription() {
 		sub.GetSampleInterval()
