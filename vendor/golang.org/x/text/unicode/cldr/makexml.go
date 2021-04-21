@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build ignore
 // +build ignore
 
 // This tool generates types for the various XML formats of CLDR.
@@ -153,7 +154,7 @@ var comments = map[string]string{
 // Dates contains information regarding the format and parsing of dates and times.
 `,
 	"localeDisplayNames": `
-// LocaleDisplayNames specifies localized display names for for scripts, languages,
+// LocaleDisplayNames specifies localized display names for scripts, languages,
 // countries, currencies, and variants.
 `,
 	"numbers": `

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build ignore
 // +build ignore
 
 // Collation table generator.
@@ -195,7 +196,7 @@ func openArchive() *zip.Reader {
 }
 
 // parseUCA parses a Default Unicode Collation Element Table of the format
-// specified in http://www.unicode.org/reports/tr10/#File_Format.
+// specified in https://www.unicode.org/reports/tr10/#File_Format.
 // It returns the variable top.
 func parseUCA(builder *build.Builder) {
 	var r io.ReadCloser
