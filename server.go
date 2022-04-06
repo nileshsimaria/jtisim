@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	apb "github.com/nileshsimaria/jtimon/authentication"
+	dialoutpb "github.com/nileshsimaria/jtimon/gnmi/dialout"
 	gnmipb "github.com/nileshsimaria/jtimon/gnmi/gnmi"
 	tpb "github.com/nileshsimaria/jtimon/telemetry"
 	"golang.org/x/net/context"
@@ -187,4 +188,69 @@ func (s *server) Subscribe(stream gnmipb.GNMI_SubscribeServer) error {
 			return stream.Context().Err()
 		}
 	}
+}
+
+type client struct {
+	jtisim *JTISim
+}
+
+func (c *client) DialOutSubscriber(ctx context.Context, opts ...grpc.CallOption) (dialoutpb.Subscriber_DialOutSubscriberClient, error) {
+	md, ok := metadata.FromIncomingContext(stream.Context())
+	if ok {
+		log.Println("Client metadata:")
+		log.Println(md)
+	}
+
+	// send metadata to client
+	header := metadata.Pairs("jtisim", "yes")
+	stream.SendHeader(header)
+
+	req, err := stream.Recv()
+	if err != nil {
+		log.Fatalf("Recv failed: %v", err)
+	}
+
+	subReq := req.GetSubscribe()
+	if subReq == nil {
+		log.Fatalf("Invalid subscribe request, received %v", req.GetRequest())
+	}
+
+	// if subReq.GetEncoding() != gnmipb.Encoding_PROTO {
+	// 	log.Fatalf("Only PROTO encoding supported, received %v", subReq.GetEncoding())
+	// }
+
+	// if subReq.GetMode() != gnmipb.SubscriptionList_STREAM {
+	// 	log.Fatalf("Only STREAM mode supported, received %v", subReq.GetMode())
+	// }
+
+	// if subReq.GetUseAliases() {
+	// 	log.Fatalf("Aliases not supported, received %v", subReq.GetUseAliases())
+	// }
+
+	// stream.Send(&gnmipb.SubscribeResponse{Response: &gnmipb.SubscribeResponse_SyncResponse{SyncResponse: true}})
+	// ch := make(chan *gnmipb.SubscribeResponse)
+	// for _, sub := range subReq.GetSubscription() {
+	// 	sub.GetSampleInterval()
+	// 	gnmiPath := sub.GetPath()
+	// 	pname, _, _ := gnmiParsePath("", gnmiPath.GetElem(), nil, nil)
+	// 	switch {
+	// 	case strings.HasPrefix(pname, "/interfaces"):
+	// 		go s.gnmiStreamInterfaces(ch, pname, sub)
+	// 	default:
+	// 		log.Fatalf("Sensor (%s) is not yet supported", pname)
+	// 	}
+	// }
+
+	// for {
+	// 	select {
+	// 	case data := <-ch:
+	// 		if err := stream.Send(data); err != nil {
+	// 			return err
+	// 		}
+	// 	case <-stream.Context().Done():
+	// 		return stream.Context().Err()
+	// 	}
+	// }
+
+	return nil
 }
