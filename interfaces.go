@@ -288,11 +288,17 @@ func (s *server) streamInterfaces(ch chan *tpb.OpenConfigData, path *tpb.Path) {
 
 // Not the way JUNOS publishes the packets, but had to make sure to sync with OC way of simulation..
 func (s *server) gnmiStreamInterfaces(ch chan *gnmipb.SubscribeResponse, pname string, sub *gnmipb.Subscription) {
-	sysID := fmt.Sprintf("jtisim:%s:%d", s.jtisim.host, s.jtisim.port)
+	var sysID string
+	if !s.jtisim.dialOut {
+		sysID = fmt.Sprintf("jtisim:%s:%d", s.jtisim.host, s.jtisim.port)
+	} else {
+		sysID = fmt.Sprintf("jtisim:%s", s.jtisim.serverName)
+	}
 	freq := sub.GetSampleInterval()
 	log.Println(pname, freq)
 
 	nsFreq := time.Duration(freq)
+	log.Println(s.jtisim.descDir)
 	iDesc := parseInterfacesJSON(s.jtisim.descDir)
 	interfaces := generateIList(iDesc)
 

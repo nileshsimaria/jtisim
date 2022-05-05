@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	js "github.com/nileshsimaria/jtisim"
+	js "jtisim"
 
 	flag "github.com/spf13/pflag"
 )

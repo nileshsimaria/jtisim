@@ -1,53 +1,79 @@
 package jtisim
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net"
+	"strconv"
 	"strings"
+	"time"
 
 	apb "github.com/nileshsimaria/jtimon/authentication"
+	dialoutpb "github.com/nileshsimaria/jtimon/gnmi/dialout"
+	gnmi "github.com/nileshsimaria/jtimon/gnmi/gnmi"
 	gnmipb "github.com/nileshsimaria/jtimon/gnmi/gnmi"
 	tpb "github.com/nileshsimaria/jtimon/telemetry"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
 	// server size compression
+	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
 )
 
 // JTISim is JTI Simulator
 type JTISim struct {
-	host    string
-	port    int32
-	random  bool
-	descDir string
+	host                              string
+	port                              int32
+	random                            bool
+	descDir                           string
+	dialOut                           bool
+	skipVerify                        bool
+	deviceCert, deviceKey, serverName string
+	CACert                            string
+	SSLServerName                     string
 }
 
 // NewJTISim to create new jti simulator
-func NewJTISim(host string, port int32, random bool, descDir string) *JTISim {
+func NewJTISim(host string, port int32, random bool, descDir string, dialOut, skipVerify bool, deviceCert, deviceKey string, CACert string, SSLServerName string, serverName string) *JTISim {
 	return &JTISim{
-		host:    host,
-		port:    port,
-		random:  random,
-		descDir: descDir,
+		host:          host,
+		port:          port,
+		random:        random,
+		descDir:       descDir,
+		dialOut:       dialOut,
+		skipVerify:    skipVerify,
+		serverName:    serverName,
+		deviceCert:    deviceCert,
+		deviceKey:     deviceKey,
+		CACert:        CACert,
+		SSLServerName: SSLServerName,
 	}
 }
 
 // Start the simulator
 func (s *JTISim) Start() error {
-	if lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", s.host, s.port)); err == nil {
-		grpcServer := grpc.NewServer()
-		authServer := &authServer{}
+	if !s.dialOut {
+		if lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", s.host, s.port)); err == nil {
+			grpcServer := grpc.NewServer()
+			authServer := &authServer{}
 
-		apb.RegisterLoginServer(grpcServer, authServer)
-		tpb.RegisterOpenConfigTelemetryServer(grpcServer, &server{s})
-		gnmipb.RegisterGNMIServer(grpcServer, &server{s})
+			apb.RegisterLoginServer(grpcServer, authServer)
+			tpb.RegisterOpenConfigTelemetryServer(grpcServer, &server{s})
+			gnmipb.RegisterGNMIServer(grpcServer, &server{s})
 
-		grpcServer.Serve(lis)
+			grpcServer.Serve(lis)
+		} else {
+			return err
+		}
 	} else {
-		return err
+		dialOutToGnmiCollector(&server{s}, s.host, s.port)
 	}
 	return nil
 }
@@ -185,6 +211,109 @@ func (s *server) Subscribe(stream gnmipb.GNMI_SubscribeServer) error {
 			}
 		case <-stream.Context().Done():
 			return stream.Context().Err()
+		}
+	}
+}
+
+func dialOutToGnmiCollector(s *server, host string, port int32) {
+	var opts []grpc.DialOption
+	if s.jtisim.skipVerify {
+		opts = []grpc.DialOption{grpc.WithInsecure()}
+	} else {
+		certificate, _ := tls.LoadX509KeyPair(s.jtisim.deviceCert, s.jtisim.deviceKey)
+		certPool := x509.NewCertPool()
+		bs, err := ioutil.ReadFile(s.jtisim.CACert)
+		if err != nil {
+			log.Fatalf("[%s] failed to read ca cert: %s", host, err)
+		}
+
+		if ok := certPool.AppendCertsFromPEM(bs); !ok {
+			log.Fatalf("[%s] failed to append certs", host)
+		}
+
+		transportCreds := credentials.NewTLS(&tls.Config{
+			Certificates: []tls.Certificate{certificate},
+			ServerName:   s.jtisim.SSLServerName,
+			RootCAs:      certPool,
+		})
+		opts = append(opts, grpc.WithTransportCredentials(transportCreds))
+	}
+	hostname := host + ":" + strconv.Itoa(int(port))
+
+	var conn *grpc.ClientConn
+	err := errors.New(fmt.Sprintf("[%s] Could not dial: %v", host, nil))
+	for err != nil {
+		conn, err = grpc.Dial(hostname, opts...)
+		if nil == err {
+			break
+		}
+
+		log.Printf(fmt.Sprintf("[%s] could not dial: %v", host, err))
+		time.Sleep(10 * time.Second)
+	}
+
+	var ctx context.Context
+	if s.jtisim.skipVerify {
+		md := metadata.New(map[string]string{"server": s.jtisim.serverName})
+		ctx = metadata.NewOutgoingContext(context.Background(), md)
+	} else {
+		ctx = context.Background()
+	}
+	dialOutSubHandle, err := dialoutpb.NewSubscriberClient(conn).DialOutSubscriber(ctx)
+	if err != nil {
+		log.Fatalf(fmt.Sprintf("gNMI host: %v, subscribe handle creation failed, err: %v", hostname, err))
+		return
+	}
+
+	err = dialOutSubHandle.Send(&gnmi.SubscribeResponse{})
+	if err != nil {
+		log.Fatalf(fmt.Sprintf("gNMI host: %v, send request failed: %v", hostname, err))
+		return
+	}
+
+	var subReq *gnmi.SubscribeRequest
+	for {
+		log.Printf("gNMI host: %v, Waiting for susbcription list", hostname)
+		subReq, err = dialOutSubHandle.Recv()
+		if err == io.EOF {
+			log.Fatalf(fmt.Sprintf("gNMI host: %v, received eof", hostname))
+		}
+
+		if err != nil {
+			log.Fatalf(fmt.Sprintf("gNMI host: %v, received error: %v", hostname, err))
+		}
+
+		break
+	}
+
+	subscriptionList := subReq.GetSubscribe()
+	if subscriptionList == nil {
+		log.Fatalf("gNMI host: %v, Invalid subscribe request, received %v", hostname, subReq.GetRequest())
+	}
+
+	for {
+		ch := make(chan *gnmipb.SubscribeResponse)
+
+		for _, sub := range subscriptionList.GetSubscription() {
+			sub.GetSampleInterval()
+			gnmiPath := sub.GetPath()
+			pname, _, _ := gnmiParsePath("", gnmiPath.GetElem(), nil, nil)
+			switch {
+			case strings.HasPrefix(pname, "/interfaces"):
+				go s.gnmiStreamInterfaces(ch, pname, sub)
+			default:
+				log.Printf("gNMI host: %v, Sensor (%s) is not yet supported", hostname, pname)
+			}
+		}
+
+		for {
+			select {
+			case data := <-ch:
+				log.Println("%s", data)
+				if err := dialOutSubHandle.Send(data); err != nil {
+					log.Fatalf("[gNMI host: %v, Error sending response: %v", hostname, err)
+				}
+			}
 		}
 	}
 }
