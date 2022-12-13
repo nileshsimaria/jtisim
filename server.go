@@ -34,6 +34,7 @@ type JTISim struct {
 	random                            bool
 	descDir                           string
 	dialOut                           bool
+	staticDialOut                     bool
 	skipVerify                        bool
 	deviceCert, deviceKey, serverName string
 	CACert                            string
@@ -41,13 +42,14 @@ type JTISim struct {
 }
 
 // NewJTISim to create new jti simulator
-func NewJTISim(host string, port int32, random bool, descDir string, dialOut, skipVerify bool, deviceCert, deviceKey string, CACert string, SSLServerName string, serverName string) *JTISim {
+func NewJTISim(host string, port int32, random bool, descDir string, dialOut, staticDialOut, skipVerify bool, deviceCert, deviceKey string, CACert string, SSLServerName string, serverName string) *JTISim {
 	return &JTISim{
 		host:          host,
 		port:          port,
 		random:        random,
 		descDir:       descDir,
 		dialOut:       dialOut,
+		staticDialOut: staticDialOut,
 		skipVerify:    skipVerify,
 		serverName:    serverName,
 		deviceCert:    deviceCert,
@@ -73,7 +75,7 @@ func (s *JTISim) Start() error {
 			return err
 		}
 	} else {
-		dialOutToGnmiCollector(&server{s}, s.host, s.port)
+		dialOutToGnmiCollector(&server{s}, s.host, s.port, s.staticDialOut)
 	}
 	return nil
 }
@@ -215,7 +217,7 @@ func (s *server) Subscribe(stream gnmipb.GNMI_SubscribeServer) error {
 	}
 }
 
-func dialOutToGnmiCollector(s *server, host string, port int32) {
+func dialOutToGnmiCollector(s *server, host string, port int32, staticDialout bool) {
 	var opts []grpc.DialOption
 	if s.jtisim.skipVerify {
 		opts = []grpc.DialOption{grpc.WithInsecure()}
@@ -271,24 +273,56 @@ func dialOutToGnmiCollector(s *server, host string, port int32) {
 		return
 	}
 
-	var subReq *gnmi.SubscribeRequest
-	for {
-		log.Printf("gNMI host: %v, Waiting for susbcription list", hostname)
-		subReq, err = dialOutSubHandle.Recv()
-		if err == io.EOF {
-			log.Fatalf(fmt.Sprintf("gNMI host: %v, received eof", hostname))
+	var subscriptionList *gnmi.SubscriptionList
+	if !staticDialout {
+		var subReq *gnmi.SubscribeRequest
+		for {
+			log.Printf("gNMI host: %v, Waiting for susbcription list", hostname)
+			subReq, err = dialOutSubHandle.Recv()
+			if err == io.EOF {
+				log.Fatalf(fmt.Sprintf("gNMI host: %v, received eof", hostname))
+			}
+
+			if err != nil {
+				log.Fatalf(fmt.Sprintf("gNMI host: %v, received error: %v", hostname, err))
+			}
+
+			break
 		}
 
-		if err != nil {
-			log.Fatalf(fmt.Sprintf("gNMI host: %v, received error: %v", hostname, err))
+		subscriptionList = subReq.GetSubscribe()
+		if subscriptionList == nil {
+			log.Fatalf("gNMI host: %v, Invalid subscribe request, received %v", hostname, subReq.GetRequest())
 		}
+	} else {
+		subscriptionList = &gnmi.SubscriptionList{
+			Prefix:           nil,
+			Subscription:     []*gnmi.Subscription{},
+			UseAliases:       false,
+			Qos:              nil,
+			Mode:             gnmi.SubscriptionList_STREAM,
+			AllowAggregation: false,
+			UseModels:        nil,
+			Encoding:         gnmi.Encoding_PROTO,
+			UpdatesOnly:      false,
+		}
+		var subs []*gnmi.Subscription
+		// TODO: Take the sensor list from some kind of input
+		for _, path := range []string{"/interfaces/"} {
+			gp, err := xPathTognmiPath(path)
+			if err != nil {
+				fmt.Println("xPathTognmiPath failed for path", path)
+				continue
+			}
 
-		break
-	}
+			mode, freq := gnmiFreq(gnmi.SubscriptionMode_SAMPLE, uint64(10000))
+			sub := &gnmi.Subscription{Path: gp, Mode: mode, SampleInterval: freq}
+			fmt.Println(gp, mode, freq)
+			fmt.Println(sub.Path, sub.Mode, sub.SampleInterval)
 
-	subscriptionList := subReq.GetSubscribe()
-	if subscriptionList == nil {
-		log.Fatalf("gNMI host: %v, Invalid subscribe request, received %v", hostname, subReq.GetRequest())
+			subs = append(subs, &gnmi.Subscription{Path: gp, Mode: mode, SampleInterval: freq})
+		}
+		subscriptionList.Subscription = subs
 	}
 
 	for {

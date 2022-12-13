@@ -1,11 +1,9 @@
 package main
 
 import (
-	"log"
-
-	js "github.com/nileshsimaria/jtisim"
-
 	flag "github.com/spf13/pflag"
+	js "jtisim"
+	"log"
 )
 
 var (
@@ -21,6 +19,7 @@ var (
 	deviceCert    = flag.String("cert", "./certs/self_signed/client-cert.pem", "Path of server cert")
 	deviceKey     = flag.String("pem", "./certs/self_signed/client-key.pem", "Path of server key")
 	SSLServerName = flag.String("ssl-server-name", "jcloud_demo.juniper.net", "SSL Server name as per cert")
+	staticDialout = flag.Bool("static-dial-out", false, "Static Dial Out")
 
 	jtisimVersion = "version-not-available"
 	buildTime     = "build-time-not-available"
@@ -33,8 +32,11 @@ func main() {
 	if *versionOnly {
 		return
 	}
+	if *staticDialout {
+		*dialOut = true
+	}
 
-	jtisim := js.NewJTISim(*host, *port, *random, *desc, *dialOut, *skipVerify, *deviceCert, *deviceKey, *CACert, *SSLServerName, *serverName)
+	jtisim := js.NewJTISim(*host, *port, *random, *desc, *dialOut, *staticDialout, *skipVerify, *deviceCert, *deviceKey, *CACert, *SSLServerName, *serverName)
 	if err := jtisim.Start(); err != nil {
 		log.Printf("can not start jti simulator: %v", err)
 	}

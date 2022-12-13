@@ -5,3 +5,4 @@ debug
 cmd/cmd
 jtisim-darwin-amd64
 jtisim-linux-amd64
+.idea/
