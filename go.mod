@@ -1,4 +1,4 @@
-module jtisim
+module github.com/nileshsimaria/jtisim
 
 go 1.13
 

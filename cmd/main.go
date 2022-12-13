@@ -1,8 +1,8 @@
 package main
 
 import (
+	js "github.com/nileshsimaria/jtisim"
 	flag "github.com/spf13/pflag"
-	js "jtisim"
 	"log"
 )
 
