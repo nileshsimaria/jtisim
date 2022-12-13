@@ -39,10 +39,13 @@ type JTISim struct {
 	deviceCert, deviceKey, serverName string
 	CACert                            string
 	SSLServerName                     string
+	Ctx                               context.Context
+	Cancel                            context.CancelFunc
 }
 
 // NewJTISim to create new jti simulator
 func NewJTISim(host string, port int32, random bool, descDir string, dialOut, staticDialOut, skipVerify bool, deviceCert, deviceKey string, CACert string, SSLServerName string, serverName string) *JTISim {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &JTISim{
 		host:          host,
 		port:          port,
@@ -56,6 +59,8 @@ func NewJTISim(host string, port int32, random bool, descDir string, dialOut, st
 		deviceKey:     deviceKey,
 		CACert:        CACert,
 		SSLServerName: SSLServerName,
+		Ctx:           ctx,
+		Cancel:        cancel,
 	}
 }
 
