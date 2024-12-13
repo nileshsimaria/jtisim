@@ -10,6 +10,7 @@ import (
 	tpb "github.com/nileshsimaria/jtimon/telemetry"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+
 	// server size compression
 	_ "google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/metadata"
@@ -40,7 +41,7 @@ func (s *JTISim) Start() error {
 		authServer := &authServer{}
 
 		apb.RegisterLoginServer(grpcServer, authServer)
-		tpb.RegisterOpenConfigTelemetryServer(grpcServer, &server{s})
+		tpb.RegisterOpenConfigTelemetryServer(grpcServer, &server{jtisim: s})
 
 		grpcServer.Serve(lis)
 	} else {
@@ -50,9 +51,12 @@ func (s *JTISim) Start() error {
 }
 
 type server struct {
+	tpb.UnsafeOpenConfigTelemetryServer
 	jtisim *JTISim
 }
+
 type authServer struct {
+	apb.UnsafeLoginServer
 }
 
 func (s *authServer) LoginCheck(ctx context.Context, req *apb.LoginRequest) (*apb.LoginReply, error) {
