@@ -14,7 +14,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  name = "github.com/nileshsimaria/jtimon"
+  name = "github.com/nileshsimaria/jtimon/proto"
   packages = [
     "authentication",
     "telemetry"

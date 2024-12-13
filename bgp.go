@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	tpb "github.com/nileshsimaria/jtimon/telemetry"
+	tpb "github.com/nileshsimaria/jtimon/proto/telemetry"
 )
 
 func (s *server) streamBGP(ch chan *tpb.OpenConfigData, path *tpb.Path) {
