@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	tpb "github.com/nileshsimaria/jtimon/proto/telemetry"
+	tpb "git.juniper.net/healthbot/service/jtimon/proto/telemetry"
 )
 
 func (s *server) streamLLDP(ch chan *tpb.OpenConfigData, path *tpb.Path) {

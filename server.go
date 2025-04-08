@@ -6,8 +6,8 @@ import (
 	"net"
 	"strings"
 
-	apb "github.com/nileshsimaria/jtimon/proto/authentication"
-	tpb "github.com/nileshsimaria/jtimon/proto/telemetry"
+	apb "git.juniper.net/healthbot/service/jtimon/proto/authentication"
+	tpb "git.juniper.net/healthbot/service/jtimon/proto/telemetry"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 

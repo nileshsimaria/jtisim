@@ -14,7 +14,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  name = "github.com/nileshsimaria/jtimon/proto"
+  name = "git.juniper.net/healthbot/service/jtimon/proto"
   packages = [
     "authentication",
     "telemetry"

@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	tpb "github.com/nileshsimaria/jtimon/proto/telemetry"
+	tpb "git.juniper.net/healthbot/service/jtimon/proto/telemetry"
 )
 
 // IDesc Interface description structrue
